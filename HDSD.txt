@@ -1,0 +1,11 @@
+https://dashboard.render.com/
+
+Pdmv2008@gmail.com
+Pdmv1834@
+
+
+
+https://api.telegram.org/bot8277053934:AAEaRMOLWbSBI-4ewhwgvs4OdQfC6yDRS00/setWebhook?url=https://toolbottele-pain.onrender.com/webhook
+
+
+https://api.telegram.org/bot8277053934:AAEaRMOLWbSBI-4ewhwgvs4OdQfC6yDRS00/getWebhookInfo
