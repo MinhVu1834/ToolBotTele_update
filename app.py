@@ -14,8 +14,8 @@ from flask import Flask, request
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
 
-REG_LINK = "https://u888h8.com?f=5059859"
-WEBAPP_LINK = "https://u888h8.com?f=5059859"  # hiện chưa dùng, để sẵn
+REG_LINK = "https://u888u.online"
+WEBAPP_LINK = "https://u888u.online"  # hiện chưa dùng, để sẵn
 
 # Keep-alive
 ENABLE_KEEP_ALIVE = os.getenv("ENABLE_KEEP_ALIVE", "false").lower() == "true"
@@ -305,7 +305,7 @@ def ask_account_status(chat_id):
     try:
         bot.send_photo(
             chat_id,
-            "AgACAgUAAxkBAAMLaU4hPt1IQAocMD9eZ2S4Lq2bBioAArILaxu0c3FWfx7PHAEF9KwBAAMCAAN5AAM2BA",
+            "AgACAgUAAxkBAANcaVYKMn5tipt3osnIEvF63aipr64AAkMLaxt8t7FWQ76cLD35rLUBAAMCAAN5AAM4BA",
             caption=text,
             reply_markup=markup
         )
@@ -347,7 +347,7 @@ def callback_handler(call):
         try:
             bot.send_photo(
                 chat_id,
-                "AgACAgUAAxkBAAMNaU4hcBWaiSorWsAIR3trbXRcVNwAArMLaxu0c3FWET-YirRSSM0BAAMCAAN5AAM2BA",
+                "AgACAgUAAxkBAANeaVYKNloKVOPyjlIGvZExD6jxMBwAAkQLaxt8t7FWhLTiG47NATUBAAMCAAN5AAM4BA",
                 caption=text,
                 reply_markup=markup
             )
@@ -369,7 +369,7 @@ def ask_for_username(chat_id):
     try:
         bot.send_photo(
             chat_id,
-            "AgACAgUAAxkBAAMPaU4hhk-x1WRUlXoO1it7nxQPOyYAArQLaxu0c3FWgg0sJOHGIygBAAMCAAN5AAM2BA",
+            "AgACAgUAAxkBAANgaVYKOjwwA5RosmDsz2IeEnTfYcIAAkULaxt8t7FWWDZTSEE2uUYBAAMCAAN5AAM4BA",
             caption=text,
             parse_mode="Markdown"
         )
@@ -440,16 +440,16 @@ def handle_text(message):
 
         reply_text = (
             f"Em đã nhận được tên tài khoản: *{username_game}* ✅\n\n"
-            "Mình vào U888 lên vốn theo mốc để nhận khuyến mãi giúp em nhé.\n"
+            "Mình vào U888 lên vốn theo mốc để nhận khuyến mãi giúp em nhé.\n\n"
             "Lên thành công mình gửi *ảnh chuyển khoản* để em cộng điểm trực tiếp vào tài khoản cho mình ạ.\n\n"
             "Có bất cứ thắc mắc gì nhắn tin trực tiếp cho CSKH U888:\n"
-            "👉 [CSKH U888](https://t.me/BeoBungBu2807)\n"
+            "👉 [Mỹ Oanh CSKH U888](https://t.me/my_oanh_u888)\n"
         )
 
         try:
             bot.send_photo(
                 chat_id,
-                "AgACAgUAAxkBAAMRaU4hlJgAAd39hDqFrCelr0k2vNWPAAK1C2sbtHNxVgABCqpC2ndbCgEAAwIAA3kAAzYE",
+                "AgACAgUAAxkBAANiaVYKQtXgg9rhzXSiuoTB4eOVOMoAAkYLaxt8t7FWKf5rHYEM7DgBAAMCAAN4AAM4BA",
                 caption=reply_text,
                 parse_mode="Markdown"
             )
@@ -506,7 +506,7 @@ def handle_media(message):
 
     bot.send_message(
         chat_id,
-        "Mình muốn chơi *BCR - Thể Thao*, *Nổ hũ - Bắn Cá* hay *Game bài* ạ?",
+        "🔔Dạ mình vui vòng cho em xin 4 số đuôi của tài khoản ngân hàng 🧾 với ạ!",
         parse_mode="Markdown"
     )
 
