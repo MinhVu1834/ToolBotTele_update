@@ -57,12 +57,21 @@ def init_db():
 def upsert_user(chat_id: int):
     conn = db_conn()
     cur = conn.cursor()
+    # đảm bảo table tồn tại (tránh crash nếu init_db chưa chạy)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            chat_id INTEGER PRIMARY KEY,
+            first_seen TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     cur.execute("""
         INSERT INTO users(chat_id) VALUES(?)
         ON CONFLICT(chat_id) DO UPDATE SET last_seen=CURRENT_TIMESTAMP
     """, (chat_id,))
     conn.commit()
     conn.close()
+
 
 def get_all_users():
     conn = db_conn()
@@ -83,6 +92,7 @@ def count_users():
 def is_admin(chat_id: int) -> bool:
     return chat_id == ADMIN_CHAT_ID
 
+init_db() 
 # ============ KEEP ALIVE ============
 
 def keep_alive():
