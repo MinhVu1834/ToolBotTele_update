@@ -131,7 +131,8 @@ def disable_getid(message):
     debug_get_id_mode.discard(chat_id)
     bot.send_message(chat_id, "🛑 Đã tắt chế độ lấy FILE_ID.")
 
-# ============ ADMIN PANEL + BROADCAST ============
+
+# ================= ADMIN PANEL + BROADCAST (TEXT/PHOTO/VIDEO) =================
 
 @bot.message_handler(commands=["admin"])
 def admin_panel(message):
@@ -156,10 +157,11 @@ def admin_exit(message):
 @bot.message_handler(func=lambda m: is_admin(m.chat.id) and m.text == "📣 Broadcast")
 def admin_broadcast_start(message):
     chat_id = message.chat.id
-    admin_state[chat_id] = {"mode": "BROADCAST_WAIT_CONTENT", "content": None}
+    admin_state[chat_id] = {"mode": "BROADCAST_WAIT_MEDIA", "payload": None}
     bot.send_message(
         chat_id,
-        "📣 Gửi *nội dung text* bạn muốn broadcast.\n"
+        "📣 Hãy gửi *nội dung cần broadcast*.\n"
+        "✅ Hỗ trợ: *Text / Ảnh / Video* (có thể kèm caption).\n"
         "Hủy: /cancel",
         parse_mode="Markdown"
     )
@@ -170,27 +172,77 @@ def cancel_any(message):
         admin_state.pop(message.chat.id, None)
         bot.send_message(message.chat.id, "✅ Đã hủy.")
 
-@bot.message_handler(
-    func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_CONTENT",
-    content_types=["text"]
-)
-def admin_receive_broadcast_content(message):
-    chat_id = message.chat.id
-    content = message.text.strip()
-    admin_state[chat_id]["content"] = content
-
+def _ask_broadcast_confirm(chat_id: int, preview_text: str):
     kb = types.InlineKeyboardMarkup()
     kb.add(
         types.InlineKeyboardButton("✅ Xác nhận gửi", callback_data="BC_CONFIRM"),
         types.InlineKeyboardButton("❌ Hủy", callback_data="BC_CANCEL")
     )
-
     bot.send_message(
         chat_id,
-        f"Bạn sắp gửi đến *{count_users()}* user:\n\n{content}\n\nXác nhận?",
+        f"Bạn sắp gửi đến *{count_users()}* user.\n\n{preview_text}\n\nXác nhận?",
         parse_mode="Markdown",
         reply_markup=kb
     )
+
+# ---- Nhận TEXT broadcast
+@bot.message_handler(
+    func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_MEDIA",
+    content_types=["text"]
+)
+def admin_receive_broadcast_text(message):
+    chat_id = message.chat.id
+    text = message.text.strip()
+
+    admin_state[chat_id]["payload"] = {
+        "type": "text",
+        "text": text
+    }
+
+    preview = f"📝 *Text:*\n{text}"
+    _ask_broadcast_confirm(chat_id, preview)
+
+# ---- Nhận PHOTO broadcast (lấy file_id ảnh lớn nhất)
+@bot.message_handler(
+    func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_MEDIA",
+    content_types=["photo"]
+)
+def admin_receive_broadcast_photo(message):
+    chat_id = message.chat.id
+    file_id = message.photo[-1].file_id
+    caption = (message.caption or "").strip()
+
+    admin_state[chat_id]["payload"] = {
+        "type": "photo",
+        "file_id": file_id,
+        "caption": caption
+    }
+
+    preview = "🖼️ *Ảnh*"
+    if caption:
+        preview += f"\nCaption:\n{caption}"
+    _ask_broadcast_confirm(chat_id, preview)
+
+# ---- Nhận VIDEO broadcast
+@bot.message_handler(
+    func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_MEDIA",
+    content_types=["video"]
+)
+def admin_receive_broadcast_video(message):
+    chat_id = message.chat.id
+    file_id = message.video.file_id
+    caption = (message.caption or "").strip()
+
+    admin_state[chat_id]["payload"] = {
+        "type": "video",
+        "file_id": file_id,
+        "caption": caption
+    }
+
+    preview = "🎬 *Video*"
+    if caption:
+        preview += f"\nCaption:\n{caption}"
+    _ask_broadcast_confirm(chat_id, preview)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["BC_CONFIRM", "BC_CANCEL"])
 def admin_broadcast_confirm(call):
@@ -203,8 +255,12 @@ def admin_broadcast_confirm(call):
         bot.answer_callback_query(call.id, "Đã hủy.")
         return bot.edit_message_text("❌ Đã hủy broadcast.", chat_id, call.message.message_id)
 
-    content = admin_state.get(chat_id, {}).get("content")
+    payload = admin_state.get(chat_id, {}).get("payload")
     admin_state.pop(chat_id, None)
+
+    if not payload:
+        bot.answer_callback_query(call.id, "Không có nội dung.")
+        return bot.edit_message_text("⚠️ Không có nội dung để gửi.", chat_id, call.message.message_id)
 
     bot.edit_message_text("⏳ Đang gửi...", chat_id, call.message.message_id)
 
@@ -213,9 +269,17 @@ def admin_broadcast_confirm(call):
 
     for uid in users:
         try:
-            bot.send_message(uid, content, disable_web_page_preview=True)
+            if payload["type"] == "text":
+                bot.send_message(uid, payload["text"], disable_web_page_preview=True)
+            elif payload["type"] == "photo":
+                bot.send_photo(uid, payload["file_id"], caption=payload.get("caption") or None)
+            elif payload["type"] == "video":
+                bot.send_video(uid, payload["file_id"], caption=payload.get("caption") or None)
+            else:
+                raise ValueError("Unsupported payload type")
+
             sent += 1
-            time.sleep(0.05)  # throttle tránh rate limit
+            time.sleep(0.05)  # throttle
         except Exception:
             failed += 1
 
