@@ -99,6 +99,26 @@ else:
     init_db()
     print("✅ Postgres users table ready.")
 
+# ===================== EXPORT USERS TXT (NEW) =====================
+
+@bot.message_handler(commands=["export_users_txt"])
+def export_users_txt_cmd(message):
+    chat_id = message.chat.id
+    if not is_admin(chat_id):
+        return bot.send_message(chat_id, "❌ Bạn không có quyền admin.")
+
+    users = get_all_users()
+    if not users:
+        return bot.send_message(chat_id, "⚠️ Chưa có user nào trong database.")
+
+    filename = "users_export.txt"
+    with open(filename, "w", encoding="utf-8") as f:
+        for uid in users:
+            f.write(str(uid) + "\n")
+
+    with open(filename, "rb") as f:
+        bot.send_document(chat_id, f, caption=f"✅ Export xong: {len(users)} users")
+
 # ============ KEEP ALIVE ============
 
 
