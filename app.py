@@ -4,7 +4,6 @@ import threading
 import time
 import psycopg
 
-
 import requests
 import telebot
 from telebot import types
@@ -33,16 +32,16 @@ user_state = {}       # {chat_id: "WAITING_USERNAME" ... hoặc dict}
 debug_get_id_mode = set()
 
 # Admin broadcast state (RAM)
-admin_state = {}      # {chat_id: {"mode": "BROADCAST_WAIT_CONTENT", "content": "..."}}
-
-# ============ DB LƯU USERS ============
+admin_state = {}      # {chat_id: {"mode": "BROADCAST_WAIT_MEDIA", "payload": {...}}}
 
 # ============ DB LƯU USERS (POSTGRES) ============
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+
 def db_conn():
-    return psycopg.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL, connect_timeout=10)
+
 
 def init_db():
     with db_conn() as conn:
@@ -56,7 +55,10 @@ def init_db():
             """)
         conn.commit()
 
+
 def upsert_user(chat_id: int):
+    if not DATABASE_URL:
+        return
     with db_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -67,25 +69,38 @@ def upsert_user(chat_id: int):
             """, (chat_id,))
         conn.commit()
 
+
 def count_users():
+    if not DATABASE_URL:
+        return 0
     with db_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM users")
             return cur.fetchone()[0]
 
+
 def get_all_users():
+    if not DATABASE_URL:
+        return []
     with db_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT chat_id FROM users")
             return [row[0] for row in cur.fetchall()]
 
 
+def is_admin(chat_id: int) -> bool:
+    return chat_id == ADMIN_CHAT_ID
 
-# def is_admin(chat_id: int) -> bool:
-#     return chat_id == ADMIN_CHAT_ID
 
-init_db() 
+# Init DB (safe)
+if not DATABASE_URL:
+    print("❌ DATABASE_URL chưa có. Vào Render > Service > Environment thêm DATABASE_URL.")
+else:
+    init_db()
+    print("✅ Postgres users table ready.")
+
 # ============ KEEP ALIVE ============
+
 
 def keep_alive():
     if not PING_URL:
@@ -100,10 +115,12 @@ def keep_alive():
             print("[KEEP_ALIVE] Lỗi ping:", e)
         time.sleep(PING_INTERVAL)
 
+
 if ENABLE_KEEP_ALIVE:
     threading.Thread(target=keep_alive, daemon=True).start()
 
 # ============ DEBUG GET FILE_ID ============
+
 
 @bot.message_handler(commands=['getid'])
 def enable_getid(message):
@@ -116,6 +133,7 @@ def enable_getid(message):
         "Tắt bằng /stopgetid",
         parse_mode="Markdown"
     )
+
 
 @bot.message_handler(commands=['stopgetid'])
 def disable_getid(message):
@@ -137,14 +155,17 @@ def admin_panel(message):
     kb.row("❌ Thoát")
     bot.send_message(chat_id, "🔧 Admin Panel", reply_markup=kb)
 
+
 @bot.message_handler(func=lambda m: is_admin(m.chat.id) and m.text == "📊 Stats")
 def admin_stats(message):
     bot.send_message(message.chat.id, f"👥 Tổng user đã lưu: {count_users()}")
+
 
 @bot.message_handler(func=lambda m: is_admin(m.chat.id) and m.text == "❌ Thoát")
 def admin_exit(message):
     admin_state.pop(message.chat.id, None)
     bot.send_message(message.chat.id, "Đã thoát admin.", reply_markup=types.ReplyKeyboardRemove())
+
 
 @bot.message_handler(func=lambda m: is_admin(m.chat.id) and m.text == "📣 Broadcast")
 def admin_broadcast_start(message):
@@ -158,11 +179,13 @@ def admin_broadcast_start(message):
         parse_mode="Markdown"
     )
 
+
 @bot.message_handler(commands=["cancel"])
 def cancel_any(message):
     if is_admin(message.chat.id):
         admin_state.pop(message.chat.id, None)
         bot.send_message(message.chat.id, "✅ Đã hủy.")
+
 
 def _ask_broadcast_confirm(chat_id: int, preview_text: str):
     kb = types.InlineKeyboardMarkup()
@@ -177,6 +200,7 @@ def _ask_broadcast_confirm(chat_id: int, preview_text: str):
         reply_markup=kb
     )
 
+
 # ---- Nhận TEXT broadcast
 @bot.message_handler(
     func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_MEDIA",
@@ -186,15 +210,13 @@ def admin_receive_broadcast_text(message):
     chat_id = message.chat.id
     text = message.text.strip()
 
-    admin_state[chat_id]["payload"] = {
-        "type": "text",
-        "text": text
-    }
+    admin_state[chat_id]["payload"] = {"type": "text", "text": text}
 
     preview = f"📝 *Text:*\n{text}"
     _ask_broadcast_confirm(chat_id, preview)
 
-# ---- Nhận PHOTO broadcast (lấy file_id ảnh lớn nhất)
+
+# ---- Nhận PHOTO broadcast
 @bot.message_handler(
     func=lambda m: is_admin(m.chat.id) and admin_state.get(m.chat.id, {}).get("mode") == "BROADCAST_WAIT_MEDIA",
     content_types=["photo"]
@@ -204,16 +226,13 @@ def admin_receive_broadcast_photo(message):
     file_id = message.photo[-1].file_id
     caption = (message.caption or "").strip()
 
-    admin_state[chat_id]["payload"] = {
-        "type": "photo",
-        "file_id": file_id,
-        "caption": caption
-    }
+    admin_state[chat_id]["payload"] = {"type": "photo", "file_id": file_id, "caption": caption}
 
     preview = "🖼️ *Ảnh*"
     if caption:
         preview += f"\nCaption:\n{caption}"
     _ask_broadcast_confirm(chat_id, preview)
+
 
 # ---- Nhận VIDEO broadcast
 @bot.message_handler(
@@ -225,16 +244,13 @@ def admin_receive_broadcast_video(message):
     file_id = message.video.file_id
     caption = (message.caption or "").strip()
 
-    admin_state[chat_id]["payload"] = {
-        "type": "video",
-        "file_id": file_id,
-        "caption": caption
-    }
+    admin_state[chat_id]["payload"] = {"type": "video", "file_id": file_id, "caption": caption}
 
     preview = "🎬 *Video*"
     if caption:
         preview += f"\nCaption:\n{caption}"
     _ask_broadcast_confirm(chat_id, preview)
+
 
 @bot.callback_query_handler(func=lambda call: call.data in ["BC_CONFIRM", "BC_CANCEL"])
 def admin_broadcast_confirm(call):
@@ -271,12 +287,13 @@ def admin_broadcast_confirm(call):
                 raise ValueError("Unsupported payload type")
 
             sent += 1
-            time.sleep(0.05)  # throttle
+            time.sleep(0.05)
         except Exception:
             failed += 1
 
     bot.send_message(ADMIN_CHAT_ID, f"✅ Broadcast xong.\nSent: {sent}\nFailed: {failed}")
     bot.answer_callback_query(call.id, "Đã gửi!")
+
 
 # ============ FLOW CŨ CỦA BẠN (GIỮ NGUYÊN, CHỈ FIX NHỎ) ============
 
@@ -307,18 +324,20 @@ def ask_account_status(chat_id):
 
     user_state[chat_id] = None
 
+
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     chat_id = message.chat.id
-    upsert_user(chat_id)  # ✅ lưu user để broadcast
+    upsert_user(chat_id)
     print(">>> /start from:", chat_id)
     ask_account_status(chat_id)
+
 
 @bot.callback_query_handler(func=lambda call: call.data in ["no_account", "have_account", "registered_done"])
 def callback_handler(call):
     chat_id = call.message.chat.id
     data = call.data
-    upsert_user(chat_id)  # ✅ cập nhật last_seen
+    upsert_user(chat_id)
 
     if data == "no_account":
         text = (
@@ -350,6 +369,7 @@ def callback_handler(call):
     elif data in ("have_account", "registered_done"):
         ask_for_username(chat_id)
 
+
 def ask_for_username(chat_id):
     text = (
         "Dạ ok anh/chị ❤️\n\n"
@@ -371,10 +391,15 @@ def ask_for_username(chat_id):
 
     user_state[chat_id] = "WAITING_USERNAME"
 
-@bot.message_handler(func=lambda message: True, content_types=['text'])
+
+# ⚠️ FIX: handler này KHÔNG bắt tin nhắn admin khi admin đang ở mode broadcast
+@bot.message_handler(
+    func=lambda m: (not is_admin(m.chat.id) or admin_state.get(m.chat.id, {}).get("mode") != "BROADCAST_WAIT_MEDIA"),
+    content_types=['text']
+)
 def handle_text(message):
     chat_id = message.chat.id
-    upsert_user(chat_id)  # ✅ cập nhật last_seen
+    upsert_user(chat_id)
 
     text = message.text.strip()
     state = user_state.get(chat_id)
@@ -392,7 +417,7 @@ def handle_text(message):
                 caption=(
                     "📩 KHÁCH GỬI CHUYỂN KHOẢN + CHỌN TRÒ CHƠI\n\n"
                     f"👤 Telegram: {tg_username}\n"
-                    f"🧾 Tên tài khoản: {state.get('username_game','(không rõ)')}\n"
+                    f"🧾 Tên tài khoản: {state.get('username_game', '(không rõ)')}\n"
                     f"🆔 Chat ID: {chat_id}\n"
                     f"🎯 Trò chơi: {game_type}\n"
                     f"⏰ Thời gian: {time_str}"
@@ -410,8 +435,6 @@ def handle_text(message):
     # --- WAITING_USERNAME ---
     if state == "WAITING_USERNAME":
         username_game = text
-
-        # ✅ FIX: lưu username_game lại để bước sau dùng
         user_state[chat_id] = {"state": "WAITING_RECEIPT", "username_game": username_game}
 
         tg_username = f"@{message.from_user.username}" if message.from_user.username else "Không có"
@@ -451,12 +474,11 @@ def handle_text(message):
 
         return
 
-    # --- Nếu admin đang chờ broadcast content thì handler khác đã bắt, nên ở đây không cần làm gì ---
 
 @bot.message_handler(content_types=['photo', 'document', 'video'])
 def handle_media(message):
     chat_id = message.chat.id
-    upsert_user(chat_id)  # ✅ cập nhật last_seen
+    upsert_user(chat_id)
 
     # --- GET FILE_ID MODE ---
     if chat_id in debug_get_id_mode:
@@ -476,7 +498,6 @@ def handle_media(message):
     # --- Flow nhận ảnh chuyển khoản ---
     state = user_state.get(chat_id)
 
-    # Chỉ nhận nếu đang WAITING_RECEIPT (dict)
     if not (isinstance(state, dict) and state.get("state") == "WAITING_RECEIPT"):
         return
 
@@ -502,24 +523,31 @@ def handle_media(message):
         parse_mode="Markdown"
     )
 
+
 # ============ WEBHOOK FLASK ============
 
 @server.route("/webhook", methods=['POST'])
 def telegram_webhook():
-    json_str = request.get_data().decode("utf-8")
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
+    try:
+        json_str = request.get_data().decode("utf-8")
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+    except Exception as e:
+        print("[WEBHOOK ERROR]", repr(e))
+        return "OK", 200
     return "OK", 200
+
 
 @server.route("/", methods=['GET'])
 def home():
     return "Bot is running!", 200
 
+
 @server.route("/health", methods=['GET'])
 def health():
     return "ok", 200
 
+
 if __name__ == "__main__":
-    init_db()
     port = int(os.getenv("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
