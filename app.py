@@ -478,7 +478,7 @@ def handle_text(message):
             "Mình vào U888 lên vốn theo mốc để nhận khuyến mãi giúp em nhé.\n\n"
             "Lên thành công mình gửi *ảnh chuyển khoản* để em cộng điểm trực tiếp vào tài khoản cho mình ạ.\n\n"
             "Có bất cứ thắc mắc gì nhắn tin trực tiếp cho CSKH U888:\n"
-            "👉 [Mỹ Oanh CSKH U888](https://t.me/my_oanh_u888)\n"
+            "👉 [Mỹ Mỹ CSKH U888](https://t.me/my_my_u888)\n"
         )
 
         try:
