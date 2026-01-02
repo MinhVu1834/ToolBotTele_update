@@ -2,7 +2,8 @@ import os
 from datetime import datetime
 import threading
 import time
-import sqlite3
+import psycopg
+
 
 import requests
 import telebot
@@ -36,61 +37,52 @@ admin_state = {}      # {chat_id: {"mode": "BROADCAST_WAIT_CONTENT", "content": 
 
 # ============ DB LƯU USERS ============
 
-DB_PATH = "users.db"
+# ============ DB LƯU USERS (POSTGRES) ============
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def db_conn():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
+    return psycopg.connect(DATABASE_URL)
 
 def init_db():
-    conn = db_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            chat_id INTEGER PRIMARY KEY,
-            first_seen TEXT DEFAULT CURRENT_TIMESTAMP,
-            last_seen TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    chat_id BIGINT PRIMARY KEY,
+                    first_seen TIMESTAMP DEFAULT NOW(),
+                    last_seen TIMESTAMP DEFAULT NOW()
+                )
+            """)
+        conn.commit()
 
 def upsert_user(chat_id: int):
-    conn = db_conn()
-    cur = conn.cursor()
-    # đảm bảo table tồn tại (tránh crash nếu init_db chưa chạy)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            chat_id INTEGER PRIMARY KEY,
-            first_seen TEXT DEFAULT CURRENT_TIMESTAMP,
-            last_seen TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    cur.execute("""
-        INSERT INTO users(chat_id) VALUES(?)
-        ON CONFLICT(chat_id) DO UPDATE SET last_seen=CURRENT_TIMESTAMP
-    """, (chat_id,))
-    conn.commit()
-    conn.close()
-
-
-def get_all_users():
-    conn = db_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT chat_id FROM users")
-    rows = cur.fetchall()
-    conn.close()
-    return [r[0] for r in rows]
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users(chat_id)
+                VALUES (%s)
+                ON CONFLICT (chat_id)
+                DO UPDATE SET last_seen = NOW()
+            """, (chat_id,))
+        conn.commit()
 
 def count_users():
-    conn = db_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM users")
-    n = cur.fetchone()[0]
-    conn.close()
-    return n
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users")
+            return cur.fetchone()[0]
 
-def is_admin(chat_id: int) -> bool:
-    return chat_id == ADMIN_CHAT_ID
+def get_all_users():
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT chat_id FROM users")
+            return [row[0] for row in cur.fetchall()]
+
+
+
+# def is_admin(chat_id: int) -> bool:
+#     return chat_id == ADMIN_CHAT_ID
 
 init_db() 
 # ============ KEEP ALIVE ============
