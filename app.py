@@ -411,7 +411,7 @@ def ask_account_status(chat_id):
     # FIX: nếu file_id ảnh sai -> fallback gửi text
     safe_send_photo(
         chat_id,
-        "AgACAgUAAxkBAANcaVYKMn5tipt3osnIEvF63aipr64AAkMLaxt8t7FWQ76cLD35rLUBAAMCAAN5AAM4BA",
+        "BQACAgUAAxkBAAMlaaLxzZ-Qyatyp9qgwltwOApXXdsAAksdAAKw1hhVuSsQCt-4X0Y6BA",
         caption=text,
         reply_markup=markup
     )
@@ -451,7 +451,7 @@ def callback_handler(call):
 
         safe_send_photo(
             chat_id,
-            "AgACAgUAAxkBAANeaVYKNloKVOPyjlIGvZExD6jxMBwAAkQLaxt8t7FWhLTiG47NATUBAAMCAAN5AAM4BA",
+            "BQACAgUAAxkBAAMnaaLyJdxt5eQmCEdE5JoxXqGlztYAAmgdAAKw1hhVQfY4UAQyR4E6BA",
             caption=text,
             reply_markup=markup
         )
@@ -470,7 +470,7 @@ def ask_for_username(chat_id):
 
     safe_send_photo(
         chat_id,
-        "AgACAgUAAxkBAANgaVYKOjwwA5RosmDsz2IeEnTfYcIAAkULaxt8t7FWWDZTSEE2uUYBAAMCAAN5AAM4BA",
+        "BQACAgUAAxkBAAMpaaLyQFYO6Jg35LlOWNkviacRAbcAAm4dAAKw1hhVpAp9-xkrmXc6BA",
         caption=text,
         parse_mode="Markdown"
     )
@@ -551,7 +551,7 @@ def handle_text(message):
 
         safe_send_photo(
             chat_id,
-            "AgACAgUAAxkBAANiaVYKQtXgg9rhzXSiuoTB4eOVOMoAAkYLaxt8t7FWKf5rHYEM7DgBAAMCAAN4AAM4BA",
+            "BQACAgUAAxkBAAMraaLyT40ZgMZweLUoPllSq0dccjoAAnAdAAKw1hhVPLrbWL9wTmE6BA",
             caption=reply_text,
             parse_mode="Markdown"
         )
