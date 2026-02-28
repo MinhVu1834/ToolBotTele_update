@@ -399,7 +399,7 @@ def ask_account_status(chat_id):
         "👋 Chào anh/chị!\n"
         "Em là Bot hỗ trợ nhận CODE ưu đãi U888.\n\n"
         "👉 Anh/chị đã có tài khoản chơi U888 chưa ạ?\n\n"
-        "(Chỉ cần bấm nút bên dưới: ĐÃ CÓ hoặc CHƯA CÓ, em hỗ trợ ngay! 😊)"
+        "Chỉ cần bấm nút bên dưới: ĐÃ CÓ hoặc CHƯA CÓ, em hỗ trợ ngay!"
     )
 
     markup = types.InlineKeyboardMarkup()
@@ -411,7 +411,7 @@ def ask_account_status(chat_id):
     # FIX: nếu file_id ảnh sai -> fallback gửi text
     safe_send_photo(
         chat_id,
-        "BQACAgUAAxkBAAMlaaLxzZ-Qyatyp9qgwltwOApXXdsAAksdAAKw1hhVuSsQCt-4X0Y6BA",
+        "AgACAgUAAxkBAANRaaL4LVK8dSDX1UahnrRSsOTMMzEAAlMRaxuw1hhVx2resvJZOuQBAAMCAAN5AAM6BA",
         caption=text,
         reply_markup=markup
     )
@@ -451,7 +451,7 @@ def callback_handler(call):
 
         safe_send_photo(
             chat_id,
-            "BQACAgUAAxkBAAMnaaLyJdxt5eQmCEdE5JoxXqGlztYAAmgdAAKw1hhVQfY4UAQyR4E6BA",
+            "AgACAgUAAxkBAAMtaaLyZrV1tDiNTPxSWOvKBQbciicAAk8Raxuw1hhVlMruFA81BtEBAAMCAAN5AAM6BA",
             caption=text,
             reply_markup=markup
         )
@@ -470,7 +470,7 @@ def ask_for_username(chat_id):
 
     safe_send_photo(
         chat_id,
-        "BQACAgUAAxkBAAMpaaLyQFYO6Jg35LlOWNkviacRAbcAAm4dAAKw1hhVpAp9-xkrmXc6BA",
+        "AgACAgUAAxkBAANLaaL4HZUlbi3ACLs9QunVSI-HQAADUBFrG7DWGFXn-RTioxpqWgEAAwIAA3kAAzoE",
         caption=text,
         parse_mode="Markdown"
     )
@@ -551,7 +551,7 @@ def handle_text(message):
 
         safe_send_photo(
             chat_id,
-            "BQACAgUAAxkBAAMraaLyT40ZgMZweLUoPllSq0dccjoAAnAdAAKw1hhVPLrbWL9wTmE6BA",
+            "AgACAgUAAxkBAANNaaL4Iq88aw9msu4h--gX0zzgLiIAAlERaxuw1hhVB78TvJHpCpkBAAMCAAN5AAM6BA",
             caption=reply_text,
             parse_mode="Markdown"
         )
